@@ -18,7 +18,10 @@ XLSX_FILE = os.path.join(SCRIPT_DIR, "STRYMON_MARINO_POLE_SCRAPER.xlsx")
 
 
 def parse_bg_number(text):
-    """Convert Bulgarian formatted number (comma as decimal) to float."""
+    """Convert Bulgarian formatted number (comma as decimal) to float.
+    Returns None for non-numeric values like 'n.a.'."""
+    if text == "n.a." or not text.strip():
+        return None
     return float(text.replace(".", "").replace(",", "."))
 
 
@@ -32,7 +35,7 @@ def fetch_hydro_data():
     h2 = soup.find("h2")
     if h2:
         text = h2.get_text()
-        # Format: "12.06.2026 08:00 ч. местно време"
+        # Format: "12.06.2026 08:00 часа местно време"
         for part in text.split():
             if "." in part and len(part) == 10:
                 try:
@@ -48,7 +51,7 @@ def fetch_hydro_data():
             break
 
     if not target_table:
-        print("Could not find the Western Aegean basin table.")
+        print("Could not find the Западнобеломорски басейн table.")
         return None
 
     for row in target_table.find_all("tr"):
@@ -67,7 +70,13 @@ def fetch_hydro_data():
             print(f"Q [m3/s]:  {q}")
             print(f"Delta H [cm]: {delta_h}")
             print()
-
+            print("Full row data:")
+            print(f"  Q_min:  {q_min} m3/s")
+            print(f"  Q_avg:  {q_avg} m3/s")
+            print(f"  Q_max:  {q_max} m3/s")
+            print(f"  H:      {h} cm")
+            print(f"  Q:      {q} m3/s")
+            print(f"  DeltaH: {delta_h} cm")
             return {
                 "date": measurement_date,
                 "q_min": q_min,
@@ -83,7 +92,7 @@ def fetch_hydro_data():
 
 
 def create_workbook():
-    """Create a new xlsx with formatted headers."""
+    """Create a new xlsx file with formatted headers."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Daily Data"
@@ -152,7 +161,6 @@ def save_to_excel(data):
         top=Side(style="thin"),
         bottom=Side(style="thin"),
     )
-
     values = [
         data["date"],
         parse_bg_number(data["q"]),
